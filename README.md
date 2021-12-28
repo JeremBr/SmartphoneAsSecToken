@@ -15,17 +15,16 @@ This token is on the app.
 He has to be logged on the app to access the token.
 
 
-Access wallet:
+## Cryptographie
 
-SCHEME 2.4
+Smartphone - Browser - Server
 
-Send password from the Browser to the server, which is valid or not
-If it's valide, the server send a token to the smartphone from the databse
-
-Then he needs to access the app on the smartphone
-And send the token to the website
+First RSA keys are shared in order to communicate.
+Then they exchange AES and MACs keys, to later use AES-GCM which ensure Confidentiality and Integrity.
 
 
+AES-GCM is an Authenticated Encryption algorithm. Which is based on Encrypt-then-MAC: c||S(Ki,c) with c=E(Ke,m)
+So we need Ke for Encryption and Ki for MAC Signature
 
 
 ## References
