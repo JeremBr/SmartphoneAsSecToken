@@ -2,6 +2,9 @@ from random import random
 from flask import Blueprint, render_template, request, flash, redirect, session
 from .models import User
 from . import db
+import string
+import random
+import time
 
 auth = Blueprint('auth', __name__)
 
@@ -16,7 +19,7 @@ def login():
         if user:
             if user.password == password:
                 flash('Credentials accepted', category='success')
-                user.token = int(random()*100)
+                #user.loginToken = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
                 db.session.commit()
                 session['credentials'] = user.id
                 return redirect('/authentication')
@@ -29,13 +32,19 @@ def login():
 
 @auth.route('/authentication', methods = ['GET', 'POST'])
 def authentication():
-    if 'credentials' not in session:
+    try:
+        user = User.query.filter_by(id=session['credentials']).first()
+        if user.smartphoneLinked == 0:
+            createToken = 'Activation token to be inserted in the smartphone app: ' + user.createToken
+        else:
+            createToken = 'Smartphone linked to the account'
+    except:
         flash('Login first', category='error')
         return redirect('/')
-    elif request.method == 'POST':
+
+    if request.method == 'POST':
         token = request.form.get('token')
-        user = User.query.filter_by(id=session['credentials']).first()
-        if token == user.token:
+        if token == user.loginToken:
             session['authenticated'] = True
             flash('You have successfully logged in to the Wallet Web Application', category='success')
             return redirect('/home_user')
@@ -43,7 +52,7 @@ def authentication():
             session.pop('credentials', None)
             flash('Incorrect token', category='error')
             return redirect('/')
-    return render_template("authentication.html")
+    return render_template("authentication.html", createToken=createToken, username=user.username)
 
 @auth.route('/deposit', methods = ['GET', 'POST'])
 def deposit():
@@ -128,7 +137,8 @@ def sign_up():
         elif password != password1:
             flash('Passwords do not match', category='error')
         else:
-            new_user = User(username=username, email=email, password=password, money=0)
+            createToken = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
+            new_user = User(username=username, email=email, password=password, money=0, createToken=createToken, smartphoneLinked=0)
             db.session.add(new_user)
             db.session.commit()
             flash('Account created', category='success')
