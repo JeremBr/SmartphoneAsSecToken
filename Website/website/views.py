@@ -14,16 +14,6 @@ def home_user():
 
     user = User.query.filter_by(id=session['credentials']).first()
 
-    return render_template("home_user.html", username=user.username, money =user.money)
-
-#@views.route('/deposit' , methods = ['GET', 'POST'])
-#def deposit():
-    if 'authenticated' not in session or 'credentials' not in session:
-            flash('User is not authenticated', category='error')
-            return redirect('/')
-
-    user = User.query.filter_by(id=session['credentials']).first()
-
-    return render_template("deposit.html", username=user.username, money =user.money)
+    return render_template("home_user.html", username=user.username, money = user.money)
 
 

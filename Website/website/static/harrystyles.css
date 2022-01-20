@@ -64,6 +64,10 @@ background-color: rgba(0,0,0,0.75) !important;
 color: white;
 }
 
+.textt h6 {
+    color: white;
+}
+
 
 input:focus{
 outline: 0 0 0 0  !important;
