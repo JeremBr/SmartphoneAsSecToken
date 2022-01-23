@@ -116,6 +116,21 @@ def logout():
     flash('User successfully logged out', category='success')
     return redirect('/')
 
+
+@auth.route('/atestation', methods = ['GET', 'POST'])
+def atestation():
+    try:
+        user = User.query.filter_by(id=session['credentials']).first()
+    except:
+        flash('Login first', category='error')
+        return redirect('/')
+    if request.method == 'POST':
+        if request.get('createToken') == user.createToken:
+            user.smartphoneLinked = 1
+            print("Valid Token")
+            db.commit()
+    return "token valid"
+
 @auth.route('/register', methods = ['GET', 'POST'])
 def sign_up():
     if request.method == 'POST':
