@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, flash, redirect, session
 from .models import User
 from . import db
 import string
+import pyDH
 import random
 import time
 
@@ -29,6 +30,16 @@ def login():
             flash('Email does not exist', category='error')
 
     return render_template("login.html")
+
+
+@auth.route('/keyexchange', methods = ['GET', 'POST'])
+def keyexchange():
+    server = pyDH.DiffieHellman()
+    server_pubkey = server.gen_public_key()
+    if request.method == 'POST':
+        app_pubkey = request.get('app_pubkey')
+        server_sharedkey = server.gen_shared_key(app_pubkey)
+    return True
 
 @auth.route('/authentication', methods = ['GET', 'POST'])
 def authentication():
@@ -129,7 +140,8 @@ def atestation():
             user.smartphoneLinked = 1
             print("Valid Token")
             db.commit()
-    return "token valid"
+            return user.loginToken
+    return 'token not valid'
 
 @auth.route('/register', methods = ['GET', 'POST'])
 def sign_up():
