@@ -9,6 +9,7 @@ def create_app():
     app.config['SECRET_KEY'] = 'rua jorge jesus'
     csrf = CSRFProtect(app)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root@localhost/test'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
     db.init_app(app)
 
     from .views import views

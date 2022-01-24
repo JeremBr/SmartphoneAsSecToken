@@ -3,14 +3,22 @@ from flask import Blueprint, render_template, request, flash, redirect, session
 from .models import User
 from . import db
 import string
-import pyDH
 import random
-import time
+import nacl.utils
+from nacl.public import PrivateKey, Box
+from nacl.signing import SigningKey
+from flask import jsonify
 
 auth = Blueprint('auth', __name__)
 
+privkserver = PrivateKey.generate()
+pubkserver = privkserver.public_key
+print(pubkserver)
+
 @auth.route('/', methods = ['GET', 'POST'])
 def login():
+    session.pop('credentials', None)
+    session.pop('authenticated', None)
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -34,12 +42,55 @@ def login():
 
 @auth.route('/keyexchange', methods = ['GET', 'POST'])
 def keyexchange():
-    server = pyDH.DiffieHellman()
-    server_pubkey = server.gen_public_key()
+    try:
+        user = User.query.filter_by(id=session['credentials']).first()
+    except:
+        flash('Login first', category='error')
+        return redirect('/')
+    if request.method == "POST":
+        pubkuser = nacl.public.PublicKey(request.get('pubkuser'))
+        server_box = Box(privkserver, pubkuser)
+        print('Keys exchanged and serverbox generated')
+    return 'Nope'
+
+
+#TBD Make sure have been exchaged
+@auth.route('/atestation', methods = ['GET', 'POST'])
+def atestation():
+    try:
+        user = User.query.filter_by(id=session['credentials']).first()
+    except:
+        flash('Login first', category='error')
+        return redirect('/')
+
     if request.method == 'POST':
-        app_pubkey = request.get('app_pubkey')
-        server_sharedkey = server.gen_shared_key(app_pubkey)
-    return True
+        if request.get('createToken') == user.createToken:
+            user.smartphoneLinked = 1
+            print("Valid Token")
+            db.session.commit()
+
+            #Create signing key
+            signing_key = SigningKey.generate()
+
+            #Sign login token
+            signed_token = signing_key.sign(bytes(user.loginToken, encoding='utf-8'))
+
+            print(str(signed_token))
+
+            #encrypt signed token to box
+            encrypted = server_box.encrypt(signed_token)
+
+            print('\n' + str(encrypted))
+
+            # Obtain the verify key for a given signing key
+            verify_key_server = signing_key.verify_key
+            # Serialize the verify key to send it to a third party
+            verify_key_server_bytes = verify_key_server.encode()
+
+            return jsonify(encrypted=encrypted, verify_key_server_bytes=verify_key_server_bytes)
+
+    return 'HOLA HOLA'
+
 
 @auth.route('/authentication', methods = ['GET', 'POST'])
 def authentication():
@@ -126,22 +177,6 @@ def logout():
     session.pop('authenticated', None)
     flash('User successfully logged out', category='success')
     return redirect('/')
-
-
-@auth.route('/atestation', methods = ['GET', 'POST'])
-def atestation():
-    try:
-        user = User.query.filter_by(id=session['credentials']).first()
-    except:
-        flash('Login first', category='error')
-        return redirect('/')
-    if request.method == 'POST':
-        if request.get('createToken') == user.createToken:
-            user.smartphoneLinked = 1
-            print("Valid Token")
-            db.commit()
-            return user.loginToken
-    return 'token not valid'
 
 @auth.route('/register', methods = ['GET', 'POST'])
 def sign_up():
