@@ -8,6 +8,8 @@ import nacl.utils
 from nacl.public import PrivateKey, Box
 from nacl.signing import SigningKey
 from flask import jsonify
+import hashlib
+import re
 
 auth = Blueprint('auth', __name__)
 
@@ -23,13 +25,13 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
 
+        password = hashlib.sha1(password.encode('utf-8')).hexdigest()
+
         user = User.query.filter_by(email=email).first()
 
         if user:
             if user.password == password:
                 flash('Credentials accepted', category='success')
-                #user.loginToken = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
-                db.session.commit()
                 session['credentials'] = user.id
                 return redirect('/authentication')
             else:
@@ -54,40 +56,38 @@ def keyexchange():
     return 'Nope'
 
 
-#TBD Make sure have been exchaged
 @auth.route('/atestation', methods = ['GET', 'POST'])
 def atestation():
-    try:
-        user = User.query.filter_by(id=session['credentials']).first()
-    except:
-        flash('Login first', category='error')
-        return redirect('/')
-
     if request.method == 'POST':
-        if request.get('createToken') == user.createToken:
-            user.smartphoneLinked = 1
-            print("Valid Token")
-            db.session.commit()
+        user = User.query.filter_by(email=request.form.get('email')).first()
+        if user:
+            if request.form.get('createToken') == user.createToken:
+                user.smartphoneLinked = 1
+                db.session.commit()
 
-            #Create signing key
-            signing_key = SigningKey.generate()
+                #Create signing key
+                #signing_key = SigningKey.generate()
 
-            #Sign login token
-            signed_token = signing_key.sign(bytes(user.loginToken, encoding='utf-8'))
+                #Sign login token
+                #signed_token = signing_key.sign(bytes(user.loginToken, encoding='utf-8'))
 
-            print(str(signed_token))
+                #print(str(signed_token))
 
-            #encrypt signed token to box
-            encrypted = server_box.encrypt(signed_token)
+                #encrypt signed token to box
+                #encrypted = server_box.encrypt(signed_token)
 
-            print('\n' + str(encrypted))
+                #print('\n' + str(encrypted))
 
-            # Obtain the verify key for a given signing key
-            verify_key_server = signing_key.verify_key
-            # Serialize the verify key to send it to a third party
-            verify_key_server_bytes = verify_key_server.encode()
+                # Obtain the verify key for a given signing key
+                #verify_key_server = signing_key.verify_key
+                # Serialize the verify key to send it to a third party
+                #verify_key_server_bytes = verify_key_server.encode()
 
-            return jsonify(encrypted=encrypted, verify_key_server_bytes=verify_key_server_bytes)
+                return "create token valid"
+            else:
+                return "tokens do not match"
+        else:
+            return "user does not exist"
 
     return 'HOLA HOLA'
 
@@ -186,21 +186,21 @@ def sign_up():
         password = request.form.get('password')
         password1 = request.form.get('password1')
 
+        m = re.compile(r'^(?=.*[A-Z])(?=.*[!@#$&*])(?=.*[0-9])(?=.*[a-z]).{8,}$')
+
         if User.query.filter_by(email=email).first():
             flash('Email already exists', category='error')
         elif len(username) < 4:
             flash('Username needs to have at least 4 characters', category='error')
         elif len(email) < 3:
             flash('Email needs to have at least 3 characters', category='error')
-        elif len(password) < 4:
-            flash('Password needs to have at least 4 characters', category='error')
-        elif len(password1) < 4:
-            flash('Password needs to have at least 5 characters', category='error')
+        elif not m.match(password):
+            flash('Password needs to have at least 8 characters, one upper case, one number and one special symbol ($!&)', category='error')
         elif password != password1:
             flash('Passwords do not match', category='error')
         else:
-            createToken = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
-            new_user = User(username=username, email=email, password=password, money=0, createToken=createToken, smartphoneLinked=0)
+            createToken = ''.join(random.choice(string.ascii_uppercase + string.digits + string.ascii_lowercase) for _ in range(10))
+            new_user = User(username=username, email=email, password=hashlib.sha1(password.encode('utf-8')).hexdigest(), money=0, createToken=createToken, smartphoneLinked=0)
             db.session.add(new_user)
             db.session.commit()
             flash('Account created', category='success')
@@ -218,13 +218,30 @@ def appLogin():
         password = request.form.get('password')
 
         user = User.query.filter_by(email=email).first()
+        password = hashlib.sha1(password.encode('utf-8')).hexdigest()
 
         if user:
             if user.password == password:
-                print("AAAA")
                 return "Credentials Accepted"
             else:
                 return "Incorrect Credentials"
         else:
             return "Email does not exist"
     return "Default"
+
+
+@auth.route('/loginToken', methods = ['GET', 'POST'])
+def loginToken():
+    if request.method == 'POST':
+        user = User.query.filter_by(email=request.form.get('email')).first()
+        if user:
+            if request.form.get('createToken') == user.createToken and user.smartphoneLinked == 1:
+                print("AAA")
+
+                return str(user.loginToken)
+            else:
+                return "create tokens do not match or smartphone is not linked"
+        else:
+            return "user does not exist"
+
+    return 'HOLA HOLA'

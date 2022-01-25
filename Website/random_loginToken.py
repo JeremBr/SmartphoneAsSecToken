@@ -6,7 +6,7 @@ import time
 db = pymysql.connect(
         host="localhost",
         user="root",
-        db="test",
+        db="sast",
     )
 
 mycursor = db.cursor()
