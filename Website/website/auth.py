@@ -207,3 +207,24 @@ def sign_up():
             return redirect('/')
 
     return render_template("register.html")
+
+
+
+@auth.route('/appLogin', methods = ['GET', 'POST'])
+#@csrf.exempt
+def appLogin():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        user = User.query.filter_by(email=email).first()
+
+        if user:
+            if user.password == password:
+                print("AAAA")
+                return "Credentials Accepted"
+            else:
+                return "Incorrect Credentials"
+        else:
+            return "Email does not exist"
+    return "Default"
