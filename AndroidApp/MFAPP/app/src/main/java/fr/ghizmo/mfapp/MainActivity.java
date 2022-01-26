@@ -64,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
 
                                     //if(result.equals("AAAA")){
                                     if(result.contains("Credentials Accepted")){
+//                                        Intent intent = new Intent(getApplicationContext(), TokenExchangeActivity.class);
                                         Intent intent = new Intent(getApplicationContext(), TokenVerificationActivity.class);
                                         intent.putExtra("email",username);
                                         startActivity(intent);

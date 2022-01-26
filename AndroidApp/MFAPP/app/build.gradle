@@ -39,4 +39,6 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
     implementation 'com.google.firebase:firebase-auth:19.3.2'
     implementation 'com.github.VishnuSivadasVS:Advanced-HttpURLConnection:1.2'
+    implementation "com.goterl:lazysodium-android:5.0.2@aar"
+    implementation "net.java.dev.jna:jna:5.8.0@aar"
 }

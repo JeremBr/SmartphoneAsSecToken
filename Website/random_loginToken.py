@@ -21,6 +21,6 @@ while(True):
         mycursor.execute("update user set loginToken='" + token + "' where id=" + str(id[0]))
 
     db.commit()
-    time.sleep(10)
+    time.sleep(30)
 
 db.close()

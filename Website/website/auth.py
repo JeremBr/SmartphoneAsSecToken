@@ -44,15 +44,11 @@ def login():
 
 @auth.route('/keyexchange', methods = ['GET', 'POST'])
 def keyexchange():
-    try:
-        user = User.query.filter_by(id=session['credentials']).first()
-    except:
-        flash('Login first', category='error')
-        return redirect('/')
-    if request.method == "POST":
-        pubkuser = nacl.public.PublicKey(request.get('pubkuser'))
-        server_box = Box(privkserver, pubkuser)
-        print('Keys exchanged and serverbox generated')
+    if request.method == 'POST':
+        user = User.query.filter_by(email=request.form.get('email')).first()
+        if user:
+            pubkuser = nacl.public.PublicKey(bytes.fromhex(request.form.get('pubkuser')))
+            return bytes(pubkserver).hex()
     return 'Nope'
 
 

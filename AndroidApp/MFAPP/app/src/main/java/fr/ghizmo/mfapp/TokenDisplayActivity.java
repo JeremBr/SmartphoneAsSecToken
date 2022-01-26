@@ -24,9 +24,11 @@ public class TokenDisplayActivity extends AppCompatActivity {
 
         TextView loginToken = (TextView)findViewById(R.id.loginToken);
 
+        int delay = 2000;
+
 
         Handler handler = new Handler();
-        handler.post(new Runnable() {
+        handler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 String[] field = new String[2];
@@ -47,7 +49,9 @@ public class TokenDisplayActivity extends AppCompatActivity {
                     }
                 }
 
+                handler.postDelayed(this, delay);
+
             }
-        });
+        }, delay);
     }
 }
