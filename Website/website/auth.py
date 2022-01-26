@@ -10,6 +10,7 @@ from nacl.signing import SigningKey
 from flask import jsonify
 import hashlib
 import re
+from nacl.signing import VerifyKey
 
 auth = Blueprint('auth', __name__)
 
@@ -100,6 +101,47 @@ def keyexchange():
 
 #     return 'HOLA HOLA'
 
+# @auth.route('/atestation', methods = ['GET', 'POST'])
+# def atestation():
+#     if request.method == 'POST':
+#         user = User.query.filter_by(email=request.form.get('email')).first()
+#         if user:
+
+#             pubkuser = nacl.public.PublicKey(bytes.fromhex(user.pubkuser))
+#             server_box = Box(privkserver, pubkuser)
+#             createToken = server_box.decrypt(bytes.fromhex(request.form.get('createToken')), bytes.fromhex(user.nonce))
+#             print(createToken)
+
+#             #if request.form.get('createToken') == user.createToken:
+#                 #user.smartphoneLinked = 1
+#                 #db.session.commit()
+
+#                 #Create signing key
+#                 #signing_key = SigningKey.generate()
+
+#                 #Sign login token
+#                 #signed_token = signing_key.sign(bytes(user.loginToken, encoding='utf-8'))
+
+#                 #print(str(signed_token))
+
+#                 #encrypt signed token to box
+#                 #encrypted = server_box.encrypt(signed_token)
+
+#                 #print('\n' + str(encrypted))
+
+#                 # Obtain the verify key for a given signing key
+#                 #verify_key_server = signing_key.verify_key
+#                 # Serialize the verify key to send it to a third party
+#                 #verify_key_server_bytes = verify_key_server.encode()
+
+#             return "create token valid"
+#             #else:
+#                 #return "tokens do not match"
+#         else:
+#             return "user does not exist"
+
+#     return 'HOLA HOLA'
+
 @auth.route('/atestation', methods = ['GET', 'POST'])
 def atestation():
     if request.method == 'POST':
@@ -108,36 +150,14 @@ def atestation():
 
             pubkuser = nacl.public.PublicKey(bytes.fromhex(user.pubkuser))
             server_box = Box(privkserver, pubkuser)
-
-            #createToken = server_box.decrypt(bytes(request.form.get('createToken')[24:], encoding='utf-8'), bytes(user.nonce, encoding='utf-8').hex())
-            createToken = server_box.decrypt(bytes(request.form.get('createToken'), encoding='utf-8')[24:], bytes.fromhex(user.nonce))
+            signedPubKey = bytes.fromhex(request.form.get('signedPubKey'))
+            verify_key = VerifyKey(signedPubKey)
+            createToken = server_box.decrypt(bytes.fromhex(request.form.get('createToken')), bytes.fromhex(request.form.get('nonce')))
             print(createToken)
-
-            #if request.form.get('createToken') == user.createToken:
-                #user.smartphoneLinked = 1
-                #db.session.commit()
-
-                #Create signing key
-                #signing_key = SigningKey.generate()
-
-                #Sign login token
-                #signed_token = signing_key.sign(bytes(user.loginToken, encoding='utf-8'))
-
-                #print(str(signed_token))
-
-                #encrypt signed token to box
-                #encrypted = server_box.encrypt(signed_token)
-
-                #print('\n' + str(encrypted))
-
-                # Obtain the verify key for a given signing key
-                #verify_key_server = signing_key.verify_key
-                # Serialize the verify key to send it to a third party
-                #verify_key_server_bytes = verify_key_server.encode()
+            createToken1 = verify_key.verify(bytes.fromhex(createToken))
+            print(createToken1)
 
             return "create token valid"
-            #else:
-                #return "tokens do not match"
         else:
             return "user does not exist"
 
@@ -297,3 +317,15 @@ def loginToken():
             return "user does not exist"
 
     return 'HOLA HOLA'
+
+
+@auth.route('/signed', methods = ['GET', 'POST'])
+def signed():
+    if request.method == 'POST':
+        signedPubKey = bytes.fromhex(request.form.get('signedPubKey'))
+        message = bytes.fromhex(request.form.get('message'))
+        verify_key = VerifyKey(signedPubKey)
+        final = verify_key.verify(message)
+        print(final.decode('utf-8'))
+
+    return 'Nope'
