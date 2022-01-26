@@ -10,3 +10,5 @@ class User(db.Model, UserMixin):
     createToken = db.Column(db.String(10), unique=True)
     loginToken = db.Column(db.String(10), unique=True)
     smartphoneLinked = db.Column(db.Integer)
+    pubkuser = db.Column(db.String(150))
+    nonce = db.Column(db.String(48))

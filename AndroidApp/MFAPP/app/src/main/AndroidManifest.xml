@@ -13,11 +13,8 @@
         android:theme="@style/Theme.MFAPP"
         android:usesCleartextTraffic="true">
         <activity
-            android:name=".TokenExchangeActivity"
-            android:exported="false" />
-        <activity
             android:name=".TokenVerificationActivity"
-            android:exported="false" />
+            android:exported="true" />
         <activity
             android:name=".LoginActivity"
             android:exported="true"
