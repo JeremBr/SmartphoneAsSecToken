@@ -47,16 +47,6 @@ public class TokenVerificationActivity extends AppCompatActivity {
     private String signed;
 
 
-/*    private static byte[] hexToBytes(String s) {
-        int len = s.length();
-        byte[] data = new byte[len / 2];
-
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i + 1), 16));
-        }
-
-        return data;
-    }*/
 
 
     @Override
@@ -68,20 +58,6 @@ public class TokenVerificationActivity extends AppCompatActivity {
         email = getIntent().getStringExtra("email");
 
         Handler handler = new Handler();
-
-
-        /*before doing all these things
-        we should check if we already have generated keys
-        so for that we need to store at creation
-        and because of storing we can use them in others activity
-        so I will do it after in shared pref
-
-        dont forget to change sharedpref to secure place
-         */
-
-
-
-
 
 
 
@@ -128,7 +104,7 @@ public class TokenVerificationActivity extends AppCompatActivity {
                     data[2] = nonce;
 
 
-                    PutData putData = new PutData("http://192.168.1.128:8080/keyexchange", "POST", field, data);
+                    PutData putData = new PutData(MainActivity.ip+"/keyexchange", "POST", field, data);
                     if (putData.startPut()) {
                         if (putData.onComplete()) {
 
@@ -249,7 +225,7 @@ public class TokenVerificationActivity extends AppCompatActivity {
                                 data[2] = signKeyPair.getPublicKey().getAsHexString();
                                 data[3] = nonce;
 
-                                PutData putData = new PutData("http://192.168.1.128:8080/atestation", "POST", field, data);
+                                PutData putData = new PutData(MainActivity.ip+"/atestation", "POST", field, data);
                                 if (putData.startPut()) {
                                     if (putData.onComplete()) {
                                         progressBar.setVisibility(View.GONE);
@@ -358,7 +334,7 @@ public class TokenVerificationActivity extends AppCompatActivity {
                     data[2] = signKeyPair.getPublicKey().getAsHexString();
                     data[3] = nonce;
 
-                    PutData putData = new PutData("http://192.168.1.128:8080/atestation", "POST", field, data);
+                    PutData putData = new PutData(MainActivity.ip+"/atestation", "POST", field, data);
                     if (putData.startPut()) {
                         if (putData.onComplete()) {
 
