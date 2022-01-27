@@ -110,9 +110,9 @@ public class TokenVerificationActivity extends AppCompatActivity {
                     nonce = lazySodium.toHexStr(byteNonce);
 
                     SharedPreferences.Editor editor = getSharedPreferences("PRIVATE_DATA", Context.MODE_PRIVATE).edit();
-                    String valueBase64String = Base64.encodeToString(byteNonce, Base64.NO_WRAP);
-                    editor.putString("PREF_BYTENONCE", valueBase64String);
-                    editor.commit();
+                    //String valueBase64String = Base64.encodeToString(byteNonce, Base64.NO_WRAP);
+                    //editor.putString("PREF_BYTENONCE", valueBase64String);
+                    //editor.commit();
 
 
                     String[] field = new String[3];
@@ -285,8 +285,10 @@ public class TokenVerificationActivity extends AppCompatActivity {
 
             SharedPreferences preferences = getSharedPreferences("PRIVATE_DATA", Context.MODE_PRIVATE);
 
-            String base64EncryptedString = preferences.getString("PREF_BYTENONCE", "");
-            byte[] byteNonce = Base64.decode(base64EncryptedString, Base64.NO_WRAP);
+            //String base64EncryptedString = preferences.getString("PREF_BYTENONCE", "");
+            //byte[] byteNonce = Base64.decode(base64EncryptedString, Base64.NO_WRAP);
+            byteNonce = lazySodium.nonce(Box.NONCEBYTES);
+            nonce = lazySodium.toHexStr(byteNonce);
 
 
             String pubKeyServ = preferences.getString("PREF_SERVPUBKEY", "");
@@ -330,7 +332,7 @@ public class TokenVerificationActivity extends AppCompatActivity {
                 @Override
                 public void run() {
 
-                    String[] field = new String[2];
+                    String[] field = new String[4];
                     field[0] = "email";
                     field[1] = "createToken";
                     field[2] = "signedPubKey";

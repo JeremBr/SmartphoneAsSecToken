@@ -11,6 +11,7 @@ from flask import jsonify
 import hashlib
 import re
 from nacl.signing import VerifyKey
+import nacl.secret
 
 auth = Blueprint('auth', __name__)
 
@@ -153,11 +154,14 @@ def atestation():
             signedPubKey = bytes.fromhex(request.form.get('signedPubKey'))
             verify_key = VerifyKey(signedPubKey)
             createToken = server_box.decrypt(bytes.fromhex(request.form.get('createToken')), bytes.fromhex(request.form.get('nonce')))
-            print(createToken)
-            createToken1 = verify_key.verify(bytes.fromhex(createToken))
-            print(createToken1)
+            createToken1 = verify_key.verify(bytes.fromhex(createToken.decode('utf-8'))).decode('utf-8')
 
-            return "create token valid"
+            if createToken1 == user.createToken:
+                user.smartphoneLinked = 1
+                db.session.commit()
+                return "create token valid"
+            else:
+                return "incorrect create token"
         else:
             return "user does not exist"
 
@@ -302,21 +306,21 @@ def appLogin():
     return "Default"
 
 
-@auth.route('/loginToken', methods = ['GET', 'POST'])
-def loginToken():
-    if request.method == 'POST':
-        user = User.query.filter_by(email=request.form.get('email')).first()
-        if user:
-            if request.form.get('createToken') == user.createToken and user.smartphoneLinked == 1:
-                print("AAA")
+# @auth.route('/loginToken', methods = ['GET', 'POST'])
+# def loginToken():
+#     if request.method == 'POST':
+#         user = User.query.filter_by(email=request.form.get('email')).first()
+#         if user:
+#             if request.form.get('createToken') == user.createToken and user.smartphoneLinked == 1:
+#                 print("AAA")
 
-                return str(user.loginToken)
-            else:
-                return "create tokens do not match or smartphone is not linked"
-        else:
-            return "user does not exist"
+#                 return str(user.loginToken)
+#             else:
+#                 return "create tokens do not match or smartphone is not linked"
+#         else:
+#             return "user does not exist"
 
-    return 'HOLA HOLA'
+#     return 'HOLA HOLA'
 
 
 @auth.route('/signed', methods = ['GET', 'POST'])
@@ -329,3 +333,39 @@ def signed():
         print(final.decode('utf-8'))
 
     return 'Nope'
+
+
+@auth.route('/loginToken', methods = ['GET', 'POST'])
+def loginToken():
+    if request.method == 'POST':
+        user = User.query.filter_by(email=request.form.get('email')).first()
+        if user:
+
+            pubkuser = nacl.public.PublicKey(bytes.fromhex(user.pubkuser))
+            server_box = Box(privkserver, pubkuser)
+            signedPubKey = bytes.fromhex(request.form.get('signedPubKey'))
+            verify_key = VerifyKey(signedPubKey)
+            createToken = server_box.decrypt(bytes.fromhex(request.form.get('createToken')), bytes.fromhex(request.form.get('nonce')))
+            createToken1 = verify_key.verify(bytes.fromhex(createToken.decode('utf-8'))).decode('utf-8')
+
+            if createToken1 == user.createToken:
+
+                signing_key = SigningKey.generate()
+                signed_token = signing_key.sign(bytes(user.loginToken, encoding='utf-8')) #bytes
+
+                nonce = nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE) #bytes
+
+                encrypted = server_box.encrypt(signed_token, nonce).hex()
+
+                verify_key_server = signing_key.verify_key
+                verify_key_server_hex = verify_key_server.encode().hex()
+
+                final = "" + nonce.hex() + ":" + encrypted + ":" + verify_key_server_hex
+
+                return final
+            else:
+                return "incorrect create token"
+        else:
+            return "user does not exist"
+
+    return 'HOLA HOLA'
