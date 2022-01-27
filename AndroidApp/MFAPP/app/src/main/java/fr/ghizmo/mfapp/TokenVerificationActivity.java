@@ -10,30 +10,53 @@ import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Base64;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.goterl.lazysodium.LazySodiumAndroid;
+import com.goterl.lazysodium.SodiumAndroid;
+import com.goterl.lazysodium.exceptions.SodiumException;
+import com.goterl.lazysodium.interfaces.Box;
+import com.goterl.lazysodium.interfaces.Sign;
+import com.goterl.lazysodium.utils.Key;
+import com.goterl.lazysodium.utils.KeyPair;
 import com.vishnusivadas.advanced_httpurlconnection.PutData;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 
 public class TokenVerificationActivity extends AppCompatActivity {
 
     private EditText inputCode1, inputCode2, inputCode3, inputCode4, inputCode5, inputCode6, inputCode7, inputCode8, inputCode9, inputCode10;
     private String email;
+
+    public static LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());
+    private Box.Lazy cryptoBoxLazy = (Box.Lazy) lazySodium;
+    private String pubKey;
+    private KeyPair clientKeys;
+    private KeyPair encryptionKeyPair;
+    private byte[] byteNonce;
+    private String nonce;
+    private String encrypted;
+    private Sign.Lazy cryptoSignLazy;
+    private KeyPair signKeyPair;
+    private String signed;
+
+
+/*    private static byte[] hexToBytes(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i + 1), 16));
+        }
+
+        return data;
+    }*/
 
 
     @Override
@@ -44,7 +67,91 @@ public class TokenVerificationActivity extends AppCompatActivity {
         String token = SaveSharedPreference.getPrefToken(TokenVerificationActivity.this);
         email = getIntent().getStringExtra("email");
 
+        Handler handler = new Handler();
+
+
+        /*before doing all these things
+        we should check if we already have generated keys
+        so for that we need to store at creation
+        and because of storing we can use them in others activity
+        so I will do it after in shared pref
+
+        dont forget to change sharedpref to secure place
+         */
+
+
+
+
+
+
+
+
         if(token.length() == 0){
+
+            //------ MAKING KEYS
+
+            try {
+                clientKeys = cryptoBoxLazy.cryptoBoxKeypair();
+                pubKey = clientKeys.getPublicKey().getAsHexString();
+
+                SharedPreferences.Editor editor = getSharedPreferences("PRIVATE_DATA", MODE_PRIVATE).edit();
+                editor.putString("PREF_USERPUBKEY", pubKey);
+                editor.commit();
+
+            } catch (SodiumException e) {
+                e.printStackTrace();
+            }
+
+            handler.post(new Runnable(){
+                @Override
+                public void run() {
+
+                    byteNonce = lazySodium.nonce(Box.NONCEBYTES);
+                    nonce = lazySodium.toHexStr(byteNonce);
+
+                    SharedPreferences.Editor editor = getSharedPreferences("PRIVATE_DATA", Context.MODE_PRIVATE).edit();
+                    //String valueBase64String = Base64.encodeToString(byteNonce, Base64.NO_WRAP);
+                    //editor.putString("PREF_BYTENONCE", valueBase64String);
+                    //editor.commit();
+
+
+                    String[] field = new String[3];
+                    field[0] = "pubkuser";
+                    field[1] = "email";
+                    field[2] = "nonce";
+
+
+                    String[] data = new String[3];
+                    data[0] = pubKey;
+                    data[1] = email;
+                    //data[2] = new String(nonce, StandardCharsets.UTF_8);
+                    data[2] = nonce;
+
+
+                    PutData putData = new PutData("http://192.168.1.128:8080/keyexchange", "POST", field, data);
+                    if (putData.startPut()) {
+                        if (putData.onComplete()) {
+
+                            String pubKeyServ = putData.getResult();
+                            Key serverPubKey = Key.fromHexString(pubKeyServ);
+                            encryptionKeyPair = new KeyPair(serverPubKey, clientKeys.getSecretKey());
+
+                            editor = getSharedPreferences("PRIVATE_DATA", MODE_PRIVATE).edit();
+                            editor.putString("PREF_SERVPUBKEY", pubKeyServ);
+                            editor.putString("PREF_USERPRIVKEY",clientKeys.getSecretKey().getAsHexString());
+                            editor.putString("PREF_USERPUBKEY",clientKeys.getPublicKey().getAsHexString());
+                            editor.commit();
+
+
+                        }
+                    }
+
+
+                }
+            });
+
+            //--------------
+
 
             inputCode1 = findViewById(R.id.inputCode1);
             inputCode2 = findViewById(R.id.inputCode2);
@@ -97,18 +204,50 @@ public class TokenVerificationActivity extends AppCompatActivity {
                     buttonVerify.setVisibility(View.INVISIBLE);
 
 
-                    Handler handler = new Handler();
+                    //------ SIGNING CREATETOKEN
+                    cryptoSignLazy = (Sign.Lazy) lazySodium;
+
+                    try {
+                        signKeyPair = cryptoSignLazy.cryptoSignKeypair();
+                    } catch (SodiumException e) {
+                        e.printStackTrace();
+                    }
+
+                    try {
+                        signed = cryptoSignLazy.cryptoSign(code, signKeyPair.getSecretKey().getAsHexString());
+                        //signed = cryptoSignLazy.cryptoSign(code, signKeyPair.getSecretKey());
+                    } catch (SodiumException e) {
+                        e.printStackTrace();
+                    }
+
+                    //--------------
+
+
+
+                    //------ ENCRYPT SIGN(CREATETOKEN)
+                    try {
+                        encrypted = cryptoBoxLazy.cryptoBoxEasy(signed, byteNonce, encryptionKeyPair);
+                    } catch (SodiumException e) {
+                        e.printStackTrace();
+                    }
+
+
                     handler.post(new Runnable() {
                             @Override
                             public void run() {
+                                //send encrypt(sign(createToken)), email, nonce, signpubkey
 
-                                String[] field = new String[2];
+                                String[] field = new String[4];
                                 field[0] = "email";
                                 field[1] = "createToken";
+                                field[2] = "signedPubKey";
+                                field[3] = "nonce";
 
-                                String[] data = new String[2];
+                                String[] data = new String[4];
                                 data[0] = email;
-                                data[1] = code;
+                                data[1] = encrypted;
+                                data[2] = signKeyPair.getPublicKey().getAsHexString();
+                                data[3] = nonce;
 
                                 PutData putData = new PutData("http://192.168.1.128:8080/atestation", "POST", field, data);
                                 if (putData.startPut()) {
@@ -128,6 +267,20 @@ public class TokenVerificationActivity extends AppCompatActivity {
                                         } else {
 
                                             //bad token
+                                            Toast.makeText(TokenVerificationActivity.this, "Wrong Token !", Toast.LENGTH_SHORT).show();
+                                            buttonVerify.setVisibility(View.VISIBLE);
+                                            inputCode1.setText("");
+                                            inputCode2.setText("");
+                                            inputCode3.setText("");
+                                            inputCode4.setText("");
+                                            inputCode5.setText("");
+                                            inputCode6.setText("");
+                                            inputCode7.setText("");
+                                            inputCode8.setText("");
+                                            inputCode9.setText("");
+                                            inputCode10.setText("");
+                                            inputCode1.requestFocus();
+
 
                                         }
 
@@ -144,18 +297,66 @@ public class TokenVerificationActivity extends AppCompatActivity {
 
         } else if (token.length() != 0){
 
-            Handler handler = new Handler();
+            SharedPreferences preferences = getSharedPreferences("PRIVATE_DATA", Context.MODE_PRIVATE);
+
+            //String base64EncryptedString = preferences.getString("PREF_BYTENONCE", "");
+            //byte[] byteNonce = Base64.decode(base64EncryptedString, Base64.NO_WRAP);
+            byteNonce = lazySodium.nonce(Box.NONCEBYTES);
+            nonce = lazySodium.toHexStr(byteNonce);
+
+
+            String pubKeyServ = preferences.getString("PREF_SERVPUBKEY", "");
+            Key serverPubKey = Key.fromHexString(pubKeyServ);
+
+            String privKeyUser = preferences.getString("PREF_USERPRIVKEY", "");
+            Key userSecretKey = Key.fromHexString(privKeyUser);
+
+
+            //------ SIGNING CREATETOKEN
+            cryptoSignLazy = (Sign.Lazy) lazySodium;
+
+
+            try {
+                signKeyPair = cryptoSignLazy.cryptoSignKeypair();
+            } catch (SodiumException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                signed = cryptoSignLazy.cryptoSign(token, signKeyPair.getSecretKey().getAsHexString());
+            } catch (SodiumException e) {
+                e.printStackTrace();
+            }
+            //------
+
+
+
+            encryptionKeyPair = new KeyPair(serverPubKey, userSecretKey);
+
+            //encrypt token
+            try {
+                encrypted = cryptoBoxLazy.cryptoBoxEasy(signed, byteNonce, encryptionKeyPair);
+            } catch (SodiumException e) {
+                e.printStackTrace();
+            }
+
+
+
             handler.post(new Runnable() {
                 @Override
                 public void run() {
 
-                    String[] field = new String[2];
+                    String[] field = new String[4];
                     field[0] = "email";
                     field[1] = "createToken";
+                    field[2] = "signedPubKey";
+                    field[3] = "nonce";
 
-                    String[] data = new String[2];
+                    String[] data = new String[4];
                     data[0] = email;
-                    data[1] = token;
+                    data[1] = encrypted;
+                    data[2] = signKeyPair.getPublicKey().getAsHexString();
+                    data[3] = nonce;
 
                     PutData putData = new PutData("http://192.168.1.128:8080/atestation", "POST", field, data);
                     if (putData.startPut()) {
@@ -187,9 +388,6 @@ public class TokenVerificationActivity extends AppCompatActivity {
 
 
         };
-
-
-
 
 
 
