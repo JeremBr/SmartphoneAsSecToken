@@ -97,7 +97,7 @@ public class TokenDisplayActivity extends AppCompatActivity {
                 data[2] = nonceSend;
                 data[3] = signKeyPair.getPublicKey().getAsHexString();
 
-                PutData putData = new PutData("http://192.168.1.128:8080/loginToken", "POST", field, data);
+                PutData putData = new PutData(MainActivity.ip+"/loginToken", "POST", field, data);
                 if (putData.startPut()) {
                     if (putData.onComplete()) {
 
