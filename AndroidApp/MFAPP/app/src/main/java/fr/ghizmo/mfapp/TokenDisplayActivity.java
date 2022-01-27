@@ -18,6 +18,8 @@ import com.goterl.lazysodium.utils.Key;
 import com.goterl.lazysodium.utils.KeyPair;
 import com.vishnusivadas.advanced_httpurlconnection.PutData;
 
+import java.util.Arrays;
+
 public class TokenDisplayActivity extends AppCompatActivity {
 
     private String email;
@@ -40,11 +42,7 @@ public class TokenDisplayActivity extends AppCompatActivity {
 
         TextView loginToken = (TextView)findViewById(R.id.loginToken);
 
-        int delay = 2000;
-
-
-
-
+        int delay = 5000;
 
         SharedPreferences preferences = getSharedPreferences("PRIVATE_DATA", Context.MODE_PRIVATE);
         String pubKeyServ = preferences.getString("PREF_SERVPUBKEY", "");
@@ -52,12 +50,6 @@ public class TokenDisplayActivity extends AppCompatActivity {
 
         String privKeyUser = preferences.getString("PREF_USERPRIVKEY", "");
         Key userSecretKey = Key.fromHexString(privKeyUser);
-
-
-        String pubKeyUser = preferences.getString("PREF_USERPUBKEY", "");
-        Key userPubKey = Key.fromHexString(privKeyUser);
-
-
 
         //------ SIGNING CREATETOKEN
         cryptoSignLazy = (Sign.Lazy) lazySodium;
@@ -105,27 +97,28 @@ public class TokenDisplayActivity extends AppCompatActivity {
                 data[2] = nonceSend;
                 data[3] = signKeyPair.getPublicKey().getAsHexString();
 
-                System.out.println(data);
-
                 PutData putData = new PutData("http://192.168.1.128:8080/loginToken", "POST", field, data);
                 if (putData.startPut()) {
                     if (putData.onComplete()) {
 
+
                         String result = putData.getResult();
-                        System.out.println(result);
 
                         String[] arrOfStr = result.split(":", 0);
-                        Key signKey=Key.fromHexString(arrOfStr[2]);
-                        byte[] nonce=lazySodium.toBinary(arrOfStr[0]);
-                        String loginTokenEncrypted=arrOfStr[1];
+                        byte[] nonce = lazySodium.toBinary(arrOfStr[0]);
+                        byte[] message = lazySodium.toBinary(arrOfStr[1]);
+                        String loginTokenEncrypted = lazySodium.toHexStr(Arrays.copyOfRange(message, 24, message.length));
+                        Key signKey = Key.fromHexString(arrOfStr[2]);
 
-                        KeyPair decryptionKeyPair = new KeyPair(serverPubKey, userSecretKey);
-                        String decryptedMessage = null;
+                        String decryptedMessage = "";
+
                         try {
-                            decryptedMessage = cryptoBoxLazy.cryptoBoxOpenEasy(loginTokenEncrypted, nonce, decryptionKeyPair);
+                            decryptedMessage = cryptoBoxLazy.cryptoBoxOpenEasy(loginTokenEncrypted, nonce, encryptionKeyPair);
+                            System.out.println(decryptedMessage);
                         } catch (SodiumException e) {
                             e.printStackTrace();
                         }
+
                         String resultingMessage = cryptoSignLazy.cryptoSignOpen(decryptedMessage, signKey);
 
                         loginToken.setText(resultingMessage);

@@ -267,6 +267,20 @@ public class TokenVerificationActivity extends AppCompatActivity {
                                         } else {
 
                                             //bad token
+                                            Toast.makeText(TokenVerificationActivity.this, "Wrong Token !", Toast.LENGTH_SHORT).show();
+                                            buttonVerify.setVisibility(View.VISIBLE);
+                                            inputCode1.setText("");
+                                            inputCode2.setText("");
+                                            inputCode3.setText("");
+                                            inputCode4.setText("");
+                                            inputCode5.setText("");
+                                            inputCode6.setText("");
+                                            inputCode7.setText("");
+                                            inputCode8.setText("");
+                                            inputCode9.setText("");
+                                            inputCode10.setText("");
+                                            inputCode1.requestFocus();
+
 
                                         }
 

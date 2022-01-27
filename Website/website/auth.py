@@ -12,6 +12,7 @@ import hashlib
 import re
 from nacl.signing import VerifyKey
 import nacl.secret
+from nacl.encoding import HexEncoder
 
 auth = Blueprint('auth', __name__)
 
@@ -351,16 +352,16 @@ def loginToken():
             if createToken1 == user.createToken:
 
                 signing_key = SigningKey.generate()
-                signed_token = signing_key.sign(bytes(user.loginToken, encoding='utf-8')) #bytes
+                signed_token = signing_key.sign(bytes(user.loginToken, encoding='utf-8'), encoder=HexEncoder)
 
                 nonce = nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE) #bytes
 
                 encrypted = server_box.encrypt(signed_token, nonce).hex()
 
                 verify_key_server = signing_key.verify_key
-                verify_key_server_hex = verify_key_server.encode().hex()
+                verify_key_server_hex = verify_key_server.encode(encoder=HexEncoder)
 
-                final = "" + nonce.hex() + ":" + encrypted + ":" + verify_key_server_hex
+                final = "" + nonce.hex() + ":" + encrypted + ":" + verify_key_server_hex.decode('utf-8')
 
                 return final
             else:
