@@ -41,6 +41,19 @@
             android:textColor="@color/colorTextSecondary"
             android:textSize="14sp" />
 
+        <EditText
+            android:id="@+id/wrongToken"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="50dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="50dp"
+            android:gravity="center"
+            android:text=""
+            android:textColor="@color/colorTextSecondary"
+            android:textSize="14sp"
+            android:visibility="invisible"/>
+
         <TextView
             android:id="@+id/textMobile"
             android:layout_width="match_parent"

@@ -19,6 +19,7 @@ public class MainActivity extends AppCompatActivity {
     TextInputEditText textInputEditTextUsername, textInputEditTextPassword;
     Button buttonLogin;
     ProgressBar progressBar;
+    public static String ip = "http://192.168.1.128:8080";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
                             data[1] = password;
 
                             //PutData putData = new PutData("http://192.168.1.128/MFAPP/login.php", "POST", field, data);
-                            PutData putData = new PutData("http://192.168.1.128:8080/appLogin", "POST", field, data);
+                            PutData putData = new PutData(MainActivity.ip+"/appLogin", "POST", field, data);
                             if (putData.startPut()){
                                 if (putData.onComplete()){
                                     progressBar.setVisibility(View.GONE);
@@ -64,7 +65,6 @@ public class MainActivity extends AppCompatActivity {
 
                                     //if(result.equals("AAAA")){
                                     if(result.contains("Credentials Accepted")){
-//                                        Intent intent = new Intent(getApplicationContext(), TokenExchangeActivity.class);
                                         Intent intent = new Intent(getApplicationContext(), TokenVerificationActivity.class);
                                         intent.putExtra("email",username);
                                         startActivity(intent);
@@ -73,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
                                     } else {
 
                                         //wrong credentials
+                                        Toast.makeText(MainActivity.this, "Wrong Crendentials !", Toast.LENGTH_SHORT).show();
                                     }
 
 
