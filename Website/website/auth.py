@@ -10,6 +10,9 @@ from nacl.signing import SigningKey
 from flask import jsonify
 import hashlib
 import re
+from nacl.signing import VerifyKey
+import nacl.secret
+from nacl.encoding import HexEncoder
 
 auth = Blueprint('auth', __name__)
 
@@ -42,46 +45,124 @@ def login():
     return render_template("login.html")
 
 
+# @auth.route('/keyexchange', methods = ['GET', 'POST'])
+# def keyexchange():
+#     if request.method == 'POST':
+#         user = User.query.filter_by(email=request.form.get('email')).first()
+#         if user:
+#             pubkuser = nacl.public.PublicKey(bytes.fromhex(request.form.get('pubkuser')))
+#             user.pubkuser = request.form.get('pubkuser')
+#             print(request.form.get('pubkuser'))
+#             db.session.commit()
+#             return bytes(pubkserver).hex()
+#     return 'Nope'
+
 @auth.route('/keyexchange', methods = ['GET', 'POST'])
 def keyexchange():
     if request.method == 'POST':
         user = User.query.filter_by(email=request.form.get('email')).first()
         if user:
-            pubkuser = nacl.public.PublicKey(bytes.fromhex(request.form.get('pubkuser')))
+            user.pubkuser = request.form.get('pubkuser')
+            user.nonce = request.form.get('nonce')
+            db.session.commit()
             return bytes(pubkserver).hex()
     return 'Nope'
 
+# @auth.route('/atestation', methods = ['GET', 'POST'])
+# def atestation():
+#     if request.method == 'POST':
+#         user = User.query.filter_by(email=request.form.get('email')).first()
+#         if user:
+#             if request.form.get('createToken') == user.createToken:
+#                 user.smartphoneLinked = 1
+#                 db.session.commit()
+
+#                 #Create signing key
+#                 #signing_key = SigningKey.generate()
+
+#                 #Sign login token
+#                 #signed_token = signing_key.sign(bytes(user.loginToken, encoding='utf-8'))
+
+#                 #print(str(signed_token))
+
+#                 #encrypt signed token to box
+#                 #encrypted = server_box.encrypt(signed_token)
+
+#                 #print('\n' + str(encrypted))
+
+#                 # Obtain the verify key for a given signing key
+#                 #verify_key_server = signing_key.verify_key
+#                 # Serialize the verify key to send it to a third party
+#                 #verify_key_server_bytes = verify_key_server.encode()
+
+#                 return "create token valid"
+#             else:
+#                 return "tokens do not match"
+#         else:
+#             return "user does not exist"
+
+#     return 'HOLA HOLA'
+
+# @auth.route('/atestation', methods = ['GET', 'POST'])
+# def atestation():
+#     if request.method == 'POST':
+#         user = User.query.filter_by(email=request.form.get('email')).first()
+#         if user:
+
+#             pubkuser = nacl.public.PublicKey(bytes.fromhex(user.pubkuser))
+#             server_box = Box(privkserver, pubkuser)
+#             createToken = server_box.decrypt(bytes.fromhex(request.form.get('createToken')), bytes.fromhex(user.nonce))
+#             print(createToken)
+
+#             #if request.form.get('createToken') == user.createToken:
+#                 #user.smartphoneLinked = 1
+#                 #db.session.commit()
+
+#                 #Create signing key
+#                 #signing_key = SigningKey.generate()
+
+#                 #Sign login token
+#                 #signed_token = signing_key.sign(bytes(user.loginToken, encoding='utf-8'))
+
+#                 #print(str(signed_token))
+
+#                 #encrypt signed token to box
+#                 #encrypted = server_box.encrypt(signed_token)
+
+#                 #print('\n' + str(encrypted))
+
+#                 # Obtain the verify key for a given signing key
+#                 #verify_key_server = signing_key.verify_key
+#                 # Serialize the verify key to send it to a third party
+#                 #verify_key_server_bytes = verify_key_server.encode()
+
+#             return "create token valid"
+#             #else:
+#                 #return "tokens do not match"
+#         else:
+#             return "user does not exist"
+
+#     return 'HOLA HOLA'
 
 @auth.route('/atestation', methods = ['GET', 'POST'])
 def atestation():
     if request.method == 'POST':
         user = User.query.filter_by(email=request.form.get('email')).first()
         if user:
-            if request.form.get('createToken') == user.createToken:
+
+            pubkuser = nacl.public.PublicKey(bytes.fromhex(user.pubkuser))
+            server_box = Box(privkserver, pubkuser)
+            signedPubKey = bytes.fromhex(request.form.get('signedPubKey'))
+            verify_key = VerifyKey(signedPubKey)
+            createToken = server_box.decrypt(bytes.fromhex(request.form.get('createToken')), bytes.fromhex(request.form.get('nonce')))
+            createToken1 = verify_key.verify(bytes.fromhex(createToken.decode('utf-8'))).decode('utf-8')
+
+            if createToken1 == user.createToken:
                 user.smartphoneLinked = 1
                 db.session.commit()
-
-                #Create signing key
-                #signing_key = SigningKey.generate()
-
-                #Sign login token
-                #signed_token = signing_key.sign(bytes(user.loginToken, encoding='utf-8'))
-
-                #print(str(signed_token))
-
-                #encrypt signed token to box
-                #encrypted = server_box.encrypt(signed_token)
-
-                #print('\n' + str(encrypted))
-
-                # Obtain the verify key for a given signing key
-                #verify_key_server = signing_key.verify_key
-                # Serialize the verify key to send it to a third party
-                #verify_key_server_bytes = verify_key_server.encode()
-
                 return "create token valid"
             else:
-                return "tokens do not match"
+                return "incorrect create token"
         else:
             return "user does not exist"
 
@@ -226,17 +307,65 @@ def appLogin():
     return "Default"
 
 
+# @auth.route('/loginToken', methods = ['GET', 'POST'])
+# def loginToken():
+#     if request.method == 'POST':
+#         user = User.query.filter_by(email=request.form.get('email')).first()
+#         if user:
+#             if request.form.get('createToken') == user.createToken and user.smartphoneLinked == 1:
+#                 print("AAA")
+
+#                 return str(user.loginToken)
+#             else:
+#                 return "create tokens do not match or smartphone is not linked"
+#         else:
+#             return "user does not exist"
+
+#     return 'HOLA HOLA'
+
+
+@auth.route('/signed', methods = ['GET', 'POST'])
+def signed():
+    if request.method == 'POST':
+        signedPubKey = bytes.fromhex(request.form.get('signedPubKey'))
+        message = bytes.fromhex(request.form.get('message'))
+        verify_key = VerifyKey(signedPubKey)
+        final = verify_key.verify(message)
+        print(final.decode('utf-8'))
+
+    return 'Nope'
+
+
 @auth.route('/loginToken', methods = ['GET', 'POST'])
 def loginToken():
     if request.method == 'POST':
         user = User.query.filter_by(email=request.form.get('email')).first()
         if user:
-            if request.form.get('createToken') == user.createToken and user.smartphoneLinked == 1:
-                print("AAA")
 
-                return str(user.loginToken)
+            pubkuser = nacl.public.PublicKey(bytes.fromhex(user.pubkuser))
+            server_box = Box(privkserver, pubkuser)
+            signedPubKey = bytes.fromhex(request.form.get('signedPubKey'))
+            verify_key = VerifyKey(signedPubKey)
+            createToken = server_box.decrypt(bytes.fromhex(request.form.get('createToken')), bytes.fromhex(request.form.get('nonce')))
+            createToken1 = verify_key.verify(bytes.fromhex(createToken.decode('utf-8'))).decode('utf-8')
+
+            if createToken1 == user.createToken:
+
+                signing_key = SigningKey.generate()
+                signed_token = signing_key.sign(bytes(user.loginToken, encoding='utf-8'), encoder=HexEncoder)
+
+                nonce = nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE) #bytes
+
+                encrypted = server_box.encrypt(signed_token, nonce).hex()
+
+                verify_key_server = signing_key.verify_key
+                verify_key_server_hex = verify_key_server.encode(encoder=HexEncoder)
+
+                final = "" + nonce.hex() + ":" + encrypted + ":" + verify_key_server_hex.decode('utf-8')
+
+                return final
             else:
-                return "create tokens do not match or smartphone is not linked"
+                return "incorrect create token"
         else:
             return "user does not exist"
 
