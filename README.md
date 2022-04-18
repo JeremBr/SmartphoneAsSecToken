@@ -9,6 +9,12 @@ This project will be further explained throughout this README file, having the f
 - **Demo:** tour of the best features and screenshots of the project running;
 - **Deployment:** deployment of the project in a set of separate virtual machines, with network isolation;
 
+
+
+Check also the pdf file, which gives information about the cryptography part in this project.
+
+
+
 ## Authors
 
 | Number | Name              | Email                               |
@@ -171,6 +177,7 @@ The server will request the **loginToken** to the **mfadb** and will do the same
 The smartphone application will reverse this and show a new page with the **loginToken** as presented under:
 
 (the show token will be different from the presented above in the **mfadb database** since it's generated a new **loginToken** every 30 second, which ensures **freshness**)
+
 ![](https://cdn.discordapp.com/attachments/829496008815280128/936623488075194368/unknown.png#center)
 
 Now the user can insert this **loginToken** in the **Authentication Token** field in the web application and this will be compared to the one present in the **mfadb database**. If they don't match a prompt will be displayed, otherwise, the user will be redirected to the route ```/home_user``` that will look like:
